@@ -84,9 +84,11 @@ parova oblika:
 ( (Double, Double) , Int ) koji predstavljaju (tacku, broj klastera)
 -}
 
--- klasterizuj :: [(Double, Double)] -> Int -> [((Double, Double), Int)]
-
 type Tacka = (Double, Double)
+
+klasterizuj :: [Tacka] -> Int -> [(Tacka, Int)]
+klasterizuj ts k = klasterovane' ts (take k ts)
+
 
 distanca :: Tacka -> Tacka -> Double
 distanca (x1, y1) (x2, y2) = sqrt (abs (x1 - x2) * abs (x1 - x2) + abs (y1 - y2) * abs (y1 - y2))
@@ -109,28 +111,36 @@ noviCentar l = podeli (sumiraneTacke l) (length l)
     podeli :: Tacka -> Int -> Tacka
     podeli (x, y) n = (x / fromIntegral n, y / fromIntegral n)
 
+noviCentri :: [[Tacka]] -> [Tacka]
+noviCentri = map noviCentar
+
 grupisaneTacke :: [(Tacka, Int)] -> Int -> [[Tacka]]
 grupisaneTacke l n = map (map fst . samoK) [1..n]
   where
     samoK :: Int -> [(Tacka, Int)]
     samoK k = filter (\x -> snd x == k) l
 
-indeks :: a => [a] -> a -> Int
+indeks :: Eq a => [a] -> a -> Int
 indeks = pom 0
   where
-    pom :: Int -> [a] -> a -> Int
+    pom :: Eq a => Int -> [a] -> a -> Int
     pom i [] _ = -1
     pom i (h:t) a
       | h == a = i
       | otherwise = pom (i + 1) t a
 
---               Parovi tacka i centra klastera
---               k
---               Centri klastera
---               Novi klasteri
-klasterovane' :: [(Tacka, Int)] -> Int -> [Tacka] -> [(Tacka, Int)]
-klasterovane' ts k cnt
-  | cnt == novi_cnt = ts
-  | otherwise = 
+klasterovane' :: [Tacka] -> [Tacka] -> [(Tacka, Int)]
+klasterovane' ts cnt
+  | cnt == new_cnt = finalizuj clts cnt
+  | otherwise = klasterovane' ts new_cnt
   where
-    novi_cnt = map noviCentar (grupisaneTacke ts k)
+    clts = klasterovane'' ts cnt
+    new_cnt = noviCentri clts
+
+klasterovane'' :: [Tacka] -> [Tacka] -> [[Tacka]]
+klasterovane'' ts cs = grupisaneTacke parovi (length cs)
+  where
+    parovi = [ (t, indeks cs (najbliza cs t)) | t <- ts ]
+
+finalizuj :: [[Tacka]] -> [Tacka] -> [(Tacka, Int)]
+finalizuj ts cs = concat [ [ (t, indeks cs c) | t <- ts ] | (ts, c) <- zip ts cs]
